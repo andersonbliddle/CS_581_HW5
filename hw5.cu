@@ -1,30 +1,85 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <cuda.h>
-#include <time.h>
 #include <sys/time.h>
+#include <cuda.h>
 
 // Kernel to compute the next generation
-__global__ void next_generation(int *grid, int *new_grid, int rows, int cols) {
-    int i = blockIdx.y * blockDim.y + threadIdx.y;
-    int j = blockIdx.x * blockDim.x + threadIdx.x;
+__global__ void next_generation_shared(int *grid, int *new_grid, int rows, int cols) {
+    // Assuming a block size of 16x16
+    __shared__ int shared_grid[18][18];  // 2 extra rows/columns for ghost cells
 
-    if (i >= 1 && i < rows - 1 && j >= 1 && j < cols - 1) {
-        int neighbors = grid[(i - 1) * cols + (j - 1)] +
-                        grid[(i - 1) * cols + j] +
-                        grid[(i - 1) * cols + (j + 1)] +
-                        grid[i * cols + (j - 1)] +
-                        grid[i * cols + (j + 1)] +
-                        grid[(i + 1) * cols + (j - 1)] +
-                        grid[(i + 1) * cols + j] +
-                        grid[(i + 1) * cols + (j + 1)];
+    int tx = threadIdx.x;
+    int ty = threadIdx.y;
+    int bx = blockIdx.x;
+    int by = blockIdx.y;
 
+    int global_x = bx * blockDim.x + tx;
+    int global_y = by * blockDim.y + ty;
+
+    // Load main cell and its neighborhood into shared memory
+    if (global_x < cols && global_y < rows) {
+        // Load the main cell
+        shared_grid[ty+1][tx+1] = grid[global_y * cols + global_x];
+
+        // Load halo cells
+        // Top row
+        if (ty == 0) {
+            if (global_y > 0)
+                shared_grid[0][tx+1] = grid[(global_y-1) * cols + global_x];
+            
+            // Corner cells
+            if (tx == 0 && global_x > 0 && global_y > 0)
+                shared_grid[0][0] = grid[(global_y-1) * cols + (global_x-1)];
+            
+            if (tx == blockDim.x-1 && global_x < cols-1 && global_y > 0)
+                shared_grid[0][tx+2] = grid[(global_y-1) * cols + (global_x+1)];
+        }
+
+        // Bottom row
+        if (ty == blockDim.y-1) {
+            if (global_y < rows-1)
+                shared_grid[ty+2][tx+1] = grid[(global_y+1) * cols + global_x];
+            
+            // Corner cells
+            if (tx == 0 && global_x > 0 && global_y < rows-1)
+                shared_grid[ty+2][0] = grid[(global_y+1) * cols + (global_x-1)];
+            
+            if (tx == blockDim.x-1 && global_x < cols-1 && global_y < rows-1)
+                shared_grid[ty+2][tx+2] = grid[(global_y+1) * cols + (global_x+1)];
+        }
+
+        // Left column
+        if (tx == 0 && global_x > 0)
+            shared_grid[ty+1][0] = grid[global_y * cols + (global_x-1)];
+
+        // Right column
+        if (tx == blockDim.x-1 && global_x < cols-1)
+            shared_grid[ty+1][tx+2] = grid[global_y * cols + (global_x+1)];
+    }
+
+    // Synchronize to ensure all shared memory is loaded
+    __syncthreads();
+
+    // Compute next state
+    if (global_x >= 1 && global_x < cols-1 && global_y >= 1 && global_y < rows-1) {
+        // Count live neighbors using shared memory
+        int neighbors = 
+            shared_grid[ty][tx] + 
+            shared_grid[ty][tx+1] + 
+            shared_grid[ty][tx+2] +
+            shared_grid[ty+1][tx] + 
+            shared_grid[ty+1][tx+2] +
+            shared_grid[ty+2][tx] + 
+            shared_grid[ty+2][tx+1] + 
+            shared_grid[ty+2][tx+2];
+
+        // Apply Game of Life rules
         if (neighbors <= 1 || neighbors >= 4)
-            new_grid[i * cols + j] = 0;  // Dies
+            new_grid[global_y * cols + global_x] = 0;  // Dies
         else if (neighbors == 3)
-            new_grid[i * cols + j] = 1;  // Born
+            new_grid[global_y * cols + global_x] = 1;  // Born
         else
-            new_grid[i * cols + j] = grid[i * cols + j];  // Stays the same
+            new_grid[global_y * cols + global_x] = shared_grid[ty+1][tx+1];  // Stays the same
     }
 }
 
@@ -38,21 +93,15 @@ void initialize_grid(int *grid, int rows, int cols) {
     }
 }
 
-// Function to write the final grid to a file
-void outputtofile(char *output_file, int* grid, int rows, int cols){
+// Output function
+void outputtofile(char *output_file, int *grid, int rows, int cols) {
     FILE *file = fopen(output_file, "w");
-    if (file == NULL) {
-        printf("Error: Unable to open file %s for writing.\n", output_file);
-        return;
-    }
-
-    for (int i = 1; i < rows - 1; i++) {  // Exclude ghost rows
-        for (int j = 1; j < cols - 1; j++) {  // Exclude ghost columns
-            fprintf(file, "%d ", grid[i * cols + j]);
+    for (int i = 1; i < rows - 1; i++) {
+        for (int j = 1; j < cols - 1; j++) {
+            fprintf(file, "%i ", grid[i * cols + j]);
         }
         fprintf(file, "\n");
     }
-
     fclose(file);
 }
 
@@ -66,18 +115,16 @@ double get_time() {
 // Main function
 int main(int argc, char **argv) {
     if (argc != 6) {
-        printf("Usage: %s <dimensions> <max_generations> <block_size> <stagnationcheck> <output_file>\n", argv[0]);
-        return -1;
+        printf("Usage: %s <dimensions (int)> <max_generations (int)> <num_threads (int)> <stagnationcheck (boolean 1 or 0)> <output directory (string)>\n", argv[0]);
+        exit(-1);
     }
 
     // Parse command line arguments
     int dimensions = atoi(argv[1]);
     int max_generations = atoi(argv[2]);
     int block_size = atoi(argv[3]);
-    int stagnationcheck = atoi(argv[4]);
-    // Output file and directory (format output_N_N_gen_threads.txt)
-    char output_file[200];
-    sprintf(output_file, "%s/output%s_%s_%s.txt", argv[5], argv[1], argv[2], argv[3]);
+    int stagnationcheck = atoi(argv[5]);
+    // Boolean for turning on and off stagnation check
 
     int rows = dimensions + 2;  // Adding ghost rows
     int cols = dimensions + 2;
@@ -103,12 +150,9 @@ int main(int argc, char **argv) {
     dim3 block_dim(block_size, block_size);
     dim3 grid_dim((cols + block_size - 1) / block_size, (rows + block_size - 1) / block_size);
 
-    // Start timing
-    double start_time = get_time();
-
     // Main simulation loop
     for (int gen = 0; gen < max_generations; gen++) {
-        next_generation<<<grid_dim, block_dim>>>(dev_grid, dev_new_grid, rows, cols);
+        next_generation_shared<<<grid_dim, block_dim>>>(dev_grid, dev_new_grid, rows, cols);
 
         // Swap grids
         int *temp = dev_grid;
@@ -121,14 +165,12 @@ int main(int argc, char **argv) {
         }
     }
 
-    // End timing
-    double end_time = get_time();
-    printf("Simulation completed in %.6f seconds\n", end_time - start_time);
-
     // Copy final grid back to host
     cudaMemcpy(host_grid, dev_grid, grid_size, cudaMemcpyDeviceToHost);
 
-    // Write the final grid to the output file
+    // Output file and directory (format output_N_N_gen_threads.txt)
+    char output_file[200];
+    sprintf(output_file, "%s/output%s_%s_%s.txt", argv[4], argv[1], argv[2], argv[3]);
     outputtofile(output_file, host_grid, rows, cols);
 
     // Free memory on device

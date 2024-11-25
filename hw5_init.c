@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
     int num_threads = atoi(argv[3]);
     // Output file and directory (format output_N_N_gen_threads.txt)
     char output_file[200];
-    sprintf(output_file, "%s/output%s_%s_%s_init.txt", argv[4], argv[1], argv[2], argv[3]);
+    sprintf(output_file, "%s/output%s_%s_%s.txt", argv[4], argv[1], argv[2], argv[3]);
     // Boolean for turning on and off stagnation check
     int stagnationcheck = atoi(argv[5]);
 
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
       // Settings for openMP parallelization for the generation for loop
       grid = generation(grid, lastgrid, ROWS, COLS, num_threads);
 
-      //fullprint(grid, lastgrid, ROWS, COLS, gen);
+      fullprint(grid, lastgrid, ROWS, COLS, gen);
 
       // Checking for stagnation and breaking loop if grid has not changed
       // Checks stagnationcheck boolean first to ensure function is not run if false
