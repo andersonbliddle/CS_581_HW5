@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
       // Settings for openMP parallelization for the generation for loop
       grid = generation(grid, lastgrid, ROWS, COLS, num_threads);
 
-      fullprint(grid, lastgrid, ROWS, COLS, gen);
+      //fullprint(grid, lastgrid, ROWS, COLS, gen);
 
       // Checking for stagnation and breaking loop if grid has not changed
       // Checks stagnationcheck boolean first to ensure function is not run if false
