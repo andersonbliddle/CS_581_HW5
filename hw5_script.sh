@@ -1,7 +1,6 @@
 #!/bin/bash
-module load cuda
-
-
+source /opt/asn/etc/asn-bash-profiles-special/modules.sh
+module load cuda/11.7.0
 
 echo "Serialized Code Runs:"
 
