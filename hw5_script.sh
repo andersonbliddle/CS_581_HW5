@@ -115,7 +115,7 @@ diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualcls
 diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualclsd0173/16/output5000_5000_16.txt
 diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualclsd0173/20/output5000_5000_20.txt
 diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualclsd0173/32/output5000_5000_32.txt
-diff /scratch/ualclsd0173/validation_grid/output5000_5000_16_init.txt /scratch/ualclsd0173/64/output5000_5000_64.txt
+diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualclsd0173/64/output5000_5000_64.txt
 
 echo "Running diffs between serial and GPU 10,0000 runs..."
 diff /scratch/ualclsd0173/validation_grid/output10000_5000_16.txt /scratch/ualclsd0173/2/output10000_5000_2.txt
