@@ -101,6 +101,10 @@ echo "GPU 10,000 x 10,000 Code Run 3:"
 ./hw5 10000 10000 32 /scratch/ualclsd0173/32/ 1
 ./hw5 10000 10000 64 /scratch/ualclsd0173/64/ 1
 
+echo "Serialized Code Runs:"
+
+./hw5_init 5000 5000 16 /scratch/ualclsd0173/validation_grid/ 1
+./hw5_init 10000 5000 16 /scratch/ualclsd0173/validation_grid/ 1
 
 echo "Running diffs between serial and GPU 5000 runs..."
 diff /scratch/ualclsd0173/validation_grid/output5000_5000_16.txt /scratch/ualclsd0173/1/output5000_5000_1.txt
