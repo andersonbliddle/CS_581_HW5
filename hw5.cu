@@ -50,12 +50,12 @@ __global__ void next_generation_shared(int *grid, int *new_grid, int rows, int c
     // Shared memory 2D indexing macro
     #define SH_IDX(y, x) shared_mem[(y) * sh_width + (x)]
 
-    // Load main cell and halo cells
+    // Load main cell and ghost cells
     if (global_x < cols && global_y < rows) {
         // Central cell
         SH_IDX(ty + 1, tx + 1) = grid[global_y * cols + global_x];
 
-        // Halo cell loading
+        // Ghost cell loading
         // Top row
         if (ty == 0) {
             if (global_y > 0)
