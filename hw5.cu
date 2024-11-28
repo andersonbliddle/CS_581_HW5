@@ -1,3 +1,18 @@
+/*
+ Name: Anderson B. Liddle
+ Email: abliddle@crimson.ua.edu
+ Course Section: CS 581
+ Homework # 5
+ Instructions to compile the program: nvcc -O3 hw5.cu -o hw5
+ Instructions to run the program: ./hw3 <dimensions (int)>
+                                    <max_generations (int)>
+                                    <block size (NxN)>
+                                    <output directory (string)>
+                                    <stagnationcheck (boolean 1 or 0)>
+ Please use this format for testing: ./hw5 5000 5000 32 . 1
+ GITHUB LINK - https://github.com/andersonbliddle/CS_581_HW5 
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -136,7 +151,7 @@ double get_time() {
 // Main function
 int main(int argc, char **argv) {
     if (argc != 6) {
-        printf("Usage: %s <dimensions (int)> <max_generations (int)> <num_threads (int)> <stagnationcheck (boolean 1 or 0)> <output directory (string)>\n", argv[0]);
+        printf("Usage: %s <dimensions (int)> <max_generations (int)> <block size (NxN)> <stagnationcheck (boolean 1 or 0)> <output directory (string)>\n", argv[0]);
         exit(-1);
     }
 
@@ -181,7 +196,7 @@ int main(int argc, char **argv) {
     for (int gen = 0; gen < max_generations; gen++) {
         size_t shared_mem_size = (block_size + 2) * (block_size + 2) * sizeof(int);
         next_generation_shared<<<grid_dim, block_dim, shared_mem_size>>>(dev_grid, dev_new_grid, rows, cols);
-
+   
         // Swap grids
         int *temp = dev_grid;
         dev_grid = dev_new_grid;
