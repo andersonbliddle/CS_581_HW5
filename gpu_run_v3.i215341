@@ -1,0 +1,18 @@
+ 
+============================================================
+=====     Queued job information at submit time        =====
+============================================================
+  The submitted file is: hw5_script.sh
+  The time limit is 6:00:00 HH:MM:SS.
+  The target directory is: /home/ualclsd0173/CS_581_HW5
+  The memory limit is: 8gb
+  The job will start running after: 202411270956.52
+  Job Name: gpu_run_v3
+  Queue: -q classgpu
+  Constraints: 
+  Command typed:
+/scripts/run_gpu hw5_script.sh     
+  Queue submit command:
+qsub -q classgpu -j oe -N gpu_run_v3 -a 202411270956.52 -r n -M abliddle@crimson.ua.edu -l walltime=6:00:00 -l select=1:ngpus=1:ncpus=1:mpiprocs=1:mem=8000mb 
+  Job number: 215341
+ 
